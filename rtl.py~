@@ -1,0 +1,40 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import subprocess
+
+#IQ is 8 bit unsigned
+
+#all freq stuff is made up and haxx
+
+center_freq = 144.0E6
+rate=2700000
+bin_size=65536
+time=0.1
+
+max_freq = rate/2.0
+min_freq = max_freq/65536
+
+def rearr(arr):
+	a=np.zeros_like(arr)
+	a[:arr.shape[0]/2]=arr[arr.shape[0]/2-1::-1]
+	a[arr.shape[0]/2:]=arr[:arr.shape[0]/2-1:-1]
+	return a
+
+dat = np.zeros((100,bin_size/100))
+
+#while(True):
+for i in range(100):
+	subprocess.call("rtl_sdr -f %i -n %i -g 2 abc.IQ" % (center_freq, bin_size),shell=True)
+	f=open("abc.IQ","rb")
+	arr=(np.fromfile(f,count=2*bin_size,dtype=np.uint8).astype(np.float_)-127.5).reshape(2,bin_size)
+	arr=arr[0,:]+1.0j*arr[1,:]
+	dat[i]=np.log(np.mean(rearr(np.abs(np.fft.fft(arr)))[:(bin_size/100)*100].reshape((bin_size/100,100)),1))
+	
+	#freqs=center_freq+min_freq*np.arange(-bin_size/2,bin_size/2)
+	#plt.plot(freqs[::40][:-1],np.log(np.mean(rearr(np.abs(np.fft.fft(arr)))[:(bin_size/40)*40].reshape((bin_size/40,40)),1)))
+	#plt.pause(0.01)
+	#plt.clf()
+	f.close()
+	print i
+plt.imshow(dat)
+plt.show()
