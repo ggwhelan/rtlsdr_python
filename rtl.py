@@ -6,35 +6,35 @@ import matplotlib.pyplot as plt
 import subprocess
 
 #IQ is 8 bit unsigned
+#all frequency stuff should be double checked and not exact
 
-#all freq stuff is made up and haxx
-
-center_freq = 460.0E6#144.0E6
-rate=2700000
-bin_size=65536
-time=0.1
-
-max_freq = rate/2.0
-min_freq = max_freq/65536
-
-def rearr(arr):
+def rearr(arr): #Used because fft frequencies go from 0->max_freq->-max_freq->-min_freq
 	return np.roll(arr,arr.shape[0]/2)
 
-dat = np.zeros((300,bin_size/100))
+center_freq = 460E6 #Hz #144.0E6
+sample_rate=2700000 #Hz
+bin_size=65536 #samples
 
-process = Popen("rtl_sdr -f %i -g 2 -" % (center_freq),stdout=PIPE,bufsize=-1,shell=True)
+max_freq = sample_rate/2.0
+min_freq = sample_rate/float(bin_size)
+freqs=center_freq+np.arange(-max_freq,max_freq,min_freq)
+
+dat1 = np.zeros((300,bin_size/50))
+
+process = Popen("rtl_sdr -f %i -g 8 -" % (center_freq),stdout=PIPE,bufsize=-1,shell=True)
 for j in range(300):
+	print j
 	bytestring=process.stdout.read(2*bin_size)
-	print [(float(int(e.encode('hex'),16))-127.5) for e in bytestring]
-# 	arr=np.zeros(bin_size,dtype=np.complex_)
-# 	for i in range(bin_size):
-# 		arr[i]=1.0*int(bytestring[2*i].encode('hex'),16)+1.0j*int(bytestring[2*i+1].encode('hex'),16)-127.5*(1.0+1.0j)
-# 	freqs=center_freq+min_freq*np.arange(-bin_size/2,bin_size/2)
-# 	#plt.plot(freqs[::100][:-1],np.log(np.mean(rearr(np.abs(np.fft.fft(arr)))[:(bin_size/100)*100].reshape((bin_size/100,100)),1)))
-# 	#plt.pause(0.01)
-# 	#plt.clf()
-# 	dat[j]=np.log(np.mean(rearr(np.abs(np.fft.fft(arr)))[:(bin_size/100)*100].reshape((bin_size/100,100)),1))
+	print time.time()
+	arr=np.array([(float(int(e.encode('hex'),16))-127.5) for e in bytestring],dtype=np.complex_).reshape(bin_size,2)
+	arr=arr[:,0]+1.0j*arr[:,1]
+	dat=np.log(np.sum(rearr(np.abs(np.fft.fft(arr)))[:(bin_size/50)*50].reshape(arr.shape[0]/50,50),1))
+	#plt.plot(freqs[::50][:-1],dat)
+	#plt.pause(0.001)
+	#plt.clf()
+	
+ 	dat1[j]=dat
 
 
-# plt.imshow(dat)
-# plt.show()
+plt.imshow(dat1)
+plt.show()
